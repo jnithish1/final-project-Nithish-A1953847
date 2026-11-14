@@ -89,6 +89,15 @@ def load_splits(data_dir: Path, seed: int = 42) -> dict[str, pd.DataFrame]:
         raise FileNotFoundError(
             f"Need at least train.jsonl and a labelled dev file in {data_dir}")
 
+    # Drop memes whose image file is missing (some mirrors are incomplete) and report it,
+    # so the numbers in the report always say exactly which memes were used.
+    def keep_present(df, name):
+        ok = df["img"].map(lambda p: (data_dir / p).exists())
+        if (~ok).sum():
+            print(f"[data] WARNING {name}: {(~ok).sum()} of {len(df)} memes have no image file -> dropped")
+        return df[ok]
+
+    train, val, tst = keep_present(train, "train"), keep_present(val, "val"), keep_present(tst, "test")
     out = {"train": train.reset_index(drop=True),
            "val": val.reset_index(drop=True),
            "test": tst.reset_index(drop=True)}
